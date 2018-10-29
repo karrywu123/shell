@@ -1,0 +1,35 @@
+mkdir -p /var/log/usermonitor/
+
+echo usermonitor >/var/log/usermonitor/usermonitor.log
+
+chown nobody:nobody /var/log/usermonitor/usermonitor.log
+
+echo usermonitor >/var/log/usermonitor/usermonitor.log
+
+chmod 002 /var/log/usermonitor/usermonitor.log
+
+chattr +a /var/log/usermonitor/usermonitor.log
+
+6.编辑/etc/profile文件，添加如下脚本命令；
+
+export HISTORY_FILE=/var/log/usermonitor/usermonitor.log
+export PROMPT_COMMAND='{ date "+%y-%m-%d %T ##### $(who am i |awk "{print \$1\" \"\$2\" \"\$5}")  #### $(id|awk "{print \$1}") #### $(history 1 | { read x cmd; echo "$cmd"; })"; } >>$HISTORY_FILE'
+
+
+2.审计日志文件权限测试；
+测试在普通用户下，审计日志文件的权限控制功能是否实现？
+
+测试普通用户读取审计日志文件，提示拒绝，表示普通用户无法读取审计日志文件；
+[kjh@kjh ~]$ more /var/log/usermonitor/usermonitor.log
+/var/log/usermonitor/usermonitor.log: Permission denied
+
+测试普通用户对日志文件的写入权限，测试命令如下；
+[kjh@kjh ~]$ echo 1 >>/var/log/usermonitor/usermonitor.log
+[kjh@kjh ~]$ echo test >>/var/log/usermonitor/usermonitor.log
+[kjh@kjh ~]$ echo test sm >>/var/log/usermonitor/usermonitor.log
+[kjh@kjh ~]$ echo user test  >>/var/log/usermonitor/usermonitor.log
+
+查看日志监测结果；
+
+12-03-20 00:05:18 ##### root pts/5 (192.168.0.101)  #### useradd kjh
+12-03-20 00:05:32 ##### root pts/5 (192.168.0.101)  #### passwd kjh
