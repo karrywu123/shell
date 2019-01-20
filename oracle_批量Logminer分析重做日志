@@ -1,0 +1,98 @@
+#!/bin/bash
+
+usage()
+{
+    echo "Usage: sh $0 {'like':'2019_01_01'} {'like':'20190101'}"
+}
+
+if [ $# -ne 2 ]
+then
+        usage
+        exit 0
+fi
+
+log_date_set=$1
+log_date=$2
+log_path=/home/u01/app/oracle/fast_recovery_area/PTDB/archivelog/$log_date_set
+n=$(ls $log_path | wc -l )
+m=`expr $n - 1`
+table01=CHECK_$log_date\_0
+sql_log01(){
+su - oracle<<EOF
+echo $first_log
+sqlplus / as sysdba<<EOG
+set pagesize 0
+set feedback off
+set verify off
+set heading off
+set echo off
+BEGIN
+dbms_logmnr_d.build(
+dictionary_filename => 'logminer_dict.ora', 
+dictionary_location => '/home/oracle/archivelog');
+END;
+/
+execute dbms_logmnr.add_logfile (LogFileName=>'$log_path/$first_log',options=>dbms_logmnr.new);
+execute dbms_logmnr.start_logmnr(dictfilename=> '/home/oracle/archivelog/logminer_dict.ora');
+create table $table01 as select timestamp,sql_redo from V\\\$LOGMNR_CONTENTS;
+exit;
+EOG
+EOF
+}
+
+sql_log02(){
+su - oracle<<EOF
+sqlplus / as sysdba<<EOG
+execute dbms_logmnr.add_logfile (LogFileName=>'$log_path/$add_log',options=>dbms_logmnr.addfile);
+execute dbms_logmnr.start_logmnr(dictfilename=> '/home/oracle/archivelog/logminer_dict.ora');
+create table CHECK_$log_date_$i as select timestamp,sql_redo from V\\\$LOGMNR_CONTENTS;
+exit;
+EOG
+EOF
+}
+
+inser_drop_table()
+{
+su - oracle<<EOF
+sqlplus / as sysdba<<EOG
+insert into CHECK_$log_date  select * from CHECK_$log_date_$i;
+drop table CHECK_$log_date_$i;
+exit;
+EOG
+EOF
+}
+
+create_table(){
+su - oracle<<EOF
+sqlplus / as sysdba<<EOG
+create table CHECK_$log_date ( timestamp DATE,sql_redo VARCHAR2(4000) ) tablespace SYSTEM  pctfree 10 pctused 40 initrans 1 maxtrans 255 storage ( initial 64K next 1M minextents 1 maxextents unlimited );
+EOG
+EOF
+}
+
+#归档命名组
+my_array=()
+for file in $(ls -lrt  $log_path  | awk '{print $9}')
+do
+my_array=("${my_array[@]}" "$file")
+done
+#创建第一个归档分析 第一个分表
+first_log=${my_array[0]}
+sql_log01
+#创建总表
+create_table
+
+#循环添加归档分析创建分表
+for((i=1;i<=$m;i++))
+do
+add_log=${my_array[i]}
+sql_log02
+done
+
+#循环插入总表 删除分表表
+for ((i=0;i<=$m;i++))
+do
+inser_drop_table
+done
+
+rm -rf /home/oracle/archivelog/*
