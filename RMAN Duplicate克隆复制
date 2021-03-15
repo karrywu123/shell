@@ -1,0 +1,253 @@
+RMAN Duplicate克隆复制
+数据库要开启归档
+alter system set db_recovery_file_dest_size = 30G;
+alter system set db_recovery_file_dest='/home/u01/app/oracle/fast_recovery_area';
+ALTER PROFILE DEFAULT LIMIT PASSWORD_LIFE_TIME UNLIMITED;
+archive log list
+shutdown immediate
+startup mount
+alter database archivelog;
+alter database open;
+#########
+RMAN 配置
+configure device type disk parallelism 3; 
+configure retention policy to recovery window of 2 days;
+复制密码文件和启动参数文件
+scp /home/u01/app/oracle/product/19.0.0/dbhome_1/dbs/initora19c4.ora  oracle@10.10.10.137:/home/u01/app/oracle/product/19.0.0/dbhome_1/dbs/
+scp /home/u01/app/oracle/product/19.0.0/dbhome_1/dbs/orapwora19c4 oracle@10.10.10.137:/home/u01/app/oracle/product/19.0.0/dbhome_1/dbs/
+
+备份数据库创建相同的目录
+mkdir -p /home/u01/app/oracle/admin/ora19c4/adump
+mkdir /home/u01/app/oracle/oradata/ORA19C4
+
+#######################################脚本备份
+#!/bin/bash
+export ORACLE_HOSTNAME=oracle19c-10-10-10-136
+ORACLE_SID=ora19c4; export ORACLE_SID
+ORACLE_UNQNAME=ora19c4; export ORACLE_UNQNAME
+JAVA_HOME=/usr/java; export JAVA_HOME
+ORACLE_BASE=/home/u01/app/oracle; export ORACLE_BASE
+ORACLE_HOME=$ORACLE_BASE/product/19.0.0/dbhome_1; export ORACLE_HOME
+ORACLE_PATH=/home/u01/app/common/oracle/sql; export ORACLE_PATH
+ORACLE_TERM=xterm; export ORACLE_TERM
+NLS_DATE_FORMAT="YYYY-MM-DD HH24:MI:SS"; export NLS_DATE_FORMAT
+TNS_ADMIN=$ORACLE_HOME/network/admin; export TNS_ADMIN
+ORA_NLS11=$ORACLE_HOME/nls/data; export ORA_NLS11
+PATH=.:${JAVA_HOME}/bin:${PATH}:$HOME/bin:$ORACLE_HOME/bin
+PATH=${PATH}:/usr/bin:/bin:/usr/bin/X11:/usr/local/bin
+PATH=${PATH}:/home/u01/app/common/oracle/bin
+export PATH
+LD_LIBRARY_PATH=$ORACLE_HOME/lib
+LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$ORACLE_HOME/oracm/lib
+LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/lib:/usr/lib:/usr/local/lib
+export LD_LIBRARY_PATH
+CLASSPATH=$ORACLE_HOME/JRE
+CLASSPATH=${CLASSPATH}:$ORACLE_HOME/jlib
+CLASSPATH=${CLASSPATH}:$ORACLE_HOME/rdbms/jlib
+CLASSPATH=${CLASSPATH}:$ORACLE_HOME/network/jlib
+export CLASSPATH
+THREADS_FLAG=native; export THREADS_FLAG
+export TEMP=/tmp
+export TMPDIR=/tmp
+export NLS_LANG=AMERICAN_AMERICA.AL32UTF8
+umask 022
+export BACKUP_DATE=`date +%Y%m%d`
+
+rman target / nocatalog msglog=/home/oracle/sh/log/bak_level_0_$BACKUP_DATE.log << EOF
+
+run{
+
+allocate channel c1 type disk;
+
+allocate channel c2 type disk;
+
+allocate channel c3 type disk;
+
+backup incremental level 0 database tag='level_0';
+
+sql 'alter system archive log current';
+
+backup archivelog from time "to_date(to_char(sysdate,'yyyy-mm-dd')||' 00:50:00','yyyy-mm-dd hh24:mi:ss')" until time "sysdate" ;
+
+release channel c1;
+
+release channel c2;
+
+release channel c3;
+
+}
+
+backup current controlfile tag='bak_ctlfile';
+
+crosscheck backup;
+
+delete noprompt expired backup;
+
+crosscheck archivelog all;
+
+report obsolete;
+
+delete noprompt obsolete;
+
+exit
+
+EOF
+
+
+#备份后并通过rsync方式传输至源端的测试环境：
+/usr/bin/rsync  -vzrtopg --delete /home/u01/app/oracle/fast_recovery_area/ORA19C4/  oracle@10.10.10.137:/home/u01/app/oracle/fast_recovery_area/ORA19C4/
+/usr/bin/rsync  -vzrtopg --delete  /home/oracle/sh/ oracle@10.10.10.137:/home/oracle/sh/
+
+
+
+#/bin/bash
+export ORACLE_HOSTNAME=oracle19c-10-10-10-136
+ORACLE_SID=ora19c4; export ORACLE_SID
+ORACLE_UNQNAME=ora19c4; export ORACLE_UNQNAME
+JAVA_HOME=/usr/java; export JAVA_HOME
+ORACLE_BASE=/home/u01/app/oracle; export ORACLE_BASE
+ORACLE_HOME=$ORACLE_BASE/product/19.0.0/dbhome_1; export ORACLE_HOME
+ORACLE_PATH=/home/u01/app/common/oracle/sql; export ORACLE_PATH
+ORACLE_TERM=xterm; export ORACLE_TERM
+NLS_DATE_FORMAT="YYYY-MM-DD HH24:MI:SS"; export NLS_DATE_FORMAT
+TNS_ADMIN=$ORACLE_HOME/network/admin; export TNS_ADMIN
+ORA_NLS11=$ORACLE_HOME/nls/data; export ORA_NLS11
+PATH=.:${JAVA_HOME}/bin:${PATH}:$HOME/bin:$ORACLE_HOME/bin
+PATH=${PATH}:/usr/bin:/bin:/usr/bin/X11:/usr/local/bin
+PATH=${PATH}:/home/u01/app/common/oracle/bin
+export PATH
+LD_LIBRARY_PATH=$ORACLE_HOME/lib
+LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$ORACLE_HOME/oracm/lib
+LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/lib:/usr/lib:/usr/local/lib
+export LD_LIBRARY_PATH
+CLASSPATH=$ORACLE_HOME/JRE
+CLASSPATH=${CLASSPATH}:$ORACLE_HOME/jlib
+CLASSPATH=${CLASSPATH}:$ORACLE_HOME/rdbms/jlib
+CLASSPATH=${CLASSPATH}:$ORACLE_HOME/network/jlib
+export CLASSPATH
+THREADS_FLAG=native; export THREADS_FLAG
+export TEMP=/tmp
+export TMPDIR=/tmp
+export NLS_LANG=AMERICAN_AMERICA.AL32UTF8
+umask 022
+
+export BACKUP_DATE=`date +%Y%m%d`
+
+rman target / nocatalog msglog=/home/oracle/sh/log/bak_level_1_$BACKUP_DATE.log << EOF
+
+
+run{
+
+allocate channel c1 type disk;
+
+allocate channel c2 type disk;
+
+allocate channel c3 type disk;
+
+backup incremental level 1 database tag='level_1' ;
+
+sql 'alter system archive log current';
+
+backup archivelog from time "to_date(to_char(sysdate,'yyyy-mm-dd')||' 00:50:00','yyyy-mm-dd hh24:mi:ss')" until time "sysdate" ;
+
+backup current controlfile tag='bak_ctlfile';
+
+release channel c1;
+
+release channel c2;
+
+release channel c3;
+
+}
+
+crosscheck backup;
+
+delete noprompt expired backup;
+
+crosscheck archivelog all;
+
+report obsolete;
+
+delete noprompt obsolete;
+
+exit
+
+EOF
+
+
+#备份后并通过rsync方式传输至源端的测试环境：
+
+/usr/bin/rsync  -vzrtopg --delete /home/u01/app/oracle/fast_recovery_area/ORA19C4/  oracle@10.10.10.137:/home/u01/app/oracle/fast_recovery_area/ORA19C4/
+/usr/bin/rsync  -vzrtopg --delete  /home/oracle/sh/ oracle@10.10.10.137:/home/oracle/sh/
+
+
+
+
+
+##############离线高级恢复
+
+
+#/bin/bash
+export ORACLE_HOSTNAME=oracle19c-10-10-10-137
+ORACLE_SID=ora19c4; export ORACLE_SID
+ORACLE_UNQNAME=ora19c4; export ORACLE_UNQNAME
+JAVA_HOME=/usr/java; export JAVA_HOME
+ORACLE_BASE=/home/u01/app/oracle; export ORACLE_BASE
+ORACLE_HOME=$ORACLE_BASE/product/19.0.0/dbhome_1; export ORACLE_HOME
+ORACLE_PATH=/home/u01/app/common/oracle/sql; export ORACLE_PATH
+ORACLE_TERM=xterm; export ORACLE_TERM
+NLS_DATE_FORMAT="YYYY-MM-DD HH24:MI:SS"; export NLS_DATE_FORMAT
+TNS_ADMIN=$ORACLE_HOME/network/admin; export TNS_ADMIN
+ORA_NLS11=$ORACLE_HOME/nls/data; export ORA_NLS11
+PATH=.:${JAVA_HOME}/bin:${PATH}:$HOME/bin:$ORACLE_HOME/bin
+PATH=${PATH}:/usr/bin:/bin:/usr/bin/X11:/usr/local/bin
+PATH=${PATH}:/home/u01/app/common/oracle/bin
+export PATH
+LD_LIBRARY_PATH=$ORACLE_HOME/lib
+LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$ORACLE_HOME/oracm/lib
+LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/lib:/usr/lib:/usr/local/lib
+export LD_LIBRARY_PATH
+CLASSPATH=$ORACLE_HOME/JRE
+CLASSPATH=${CLASSPATH}:$ORACLE_HOME/jlib
+CLASSPATH=${CLASSPATH}:$ORACLE_HOME/rdbms/jlib
+CLASSPATH=${CLASSPATH}:$ORACLE_HOME/network/jlib
+export CLASSPATH
+THREADS_FLAG=native; export THREADS_FLAG
+export TEMP=/tmp
+export TMPDIR=/tmp
+export NLS_LANG=AMERICAN_AMERICA.AL32UTF8
+umask 022
+export BACKUP_DATE=`date +%Y%m%d`
+
+export BACKUP_DATE1=`date +%Y_%m_%d`
+sqlplus "/as sysdba" << EOF
+
+shutdown immediate
+
+startup nomount
+
+exit
+
+EOF
+
+rman auxiliary / msglog=/home/oracle/sh/log/recover_$BACKUP_DATE.log <<EOF
+
+
+run{
+
+ duplicate target database to ora19c4  backup location '/home/u01/app/oracle/fast_recovery_area/ORA19C4/' nofilenamecheck ;
+
+}
+
+EOF
+
+
+
+#################################备份恢复
+实体正式运行的数据库做备份任务
+30 05 * * 0 /home/oracle/sh/rman_leve_0_back.sh
+30 05 * * 1,2,3,4,5,6 /home/oracle/sh/rman_leve_1_back.sh
+
+
+备份数据库运行的备份克隆恢复任务
+30 07 * * *  /home/oracle/recover_db.sh
