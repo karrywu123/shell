@@ -169,8 +169,8 @@ if __name__ == '__main__':
 - hosts: web
   gather_facts: F   #开启debug
   tasks:
-  - name: nslookup
-    shell: nslookup {{ domain }}
+  - name: ping
+    shell: ping -c 1 {{ domain }}
     ignore_errors: True
     register: tomcat_out  #定义变量存储返回的结果
   ########################################## hosts 文件
