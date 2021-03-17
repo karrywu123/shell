@@ -15,6 +15,7 @@ from ansible.executor.task_queue_manager import TaskQueueManager  # ansible 底�
 from ansible.plugins.callback import CallbackBase  # 处理任务执行后返回的状态
 from ansible import context  # 上下文管理器，他就是用来接收 ImmutableDict 的示例对象
 import ansible.constants as C  # 用于获取 ansible 产生的临时文档
+from ansible.executor.playbook_executor import PlaybookExecutor
 
 
 class ResultCallback(CallbackBase):
@@ -129,15 +130,14 @@ class MyAnsiable2(object):
                 tqm.cleanup()
                 shutil.rmtree(C.DEFAULT_LOCAL_TMP, True)
 
-    def playbook(self, playbooks,vars):
+    def playbook(self, playbooks,extra_vars):
 
         """
         Keyword arguments:
         playbooks --  需要是一个列表类型
         vars 自定义参数
         """
-        from ansible.executor.playbook_executor import PlaybookExecutor
-        self.inv_obj.extra_vars = vars
+        self.variable_manager._extra_vars=extra_vars
         playbook = PlaybookExecutor(playbooks=playbooks,
                                     inventory=self.inv_obj,
                                     variable_manager=self.variable_manager,
@@ -162,16 +162,15 @@ class MyAnsiable2(object):
 
 if __name__ == '__main__':
    ansible3 = MyAnsiable2(inventory='hosts', connection='smart')
-   ansible3.playbook(playbooks=['test.yml'] ,vars={'domain':'www.baidu.com'})
+   ansible3.playbook(playbooks=['test.yml'],extra_vars={'domain':'www.baidu.com'})
    stdout_dict = json.loads(ansible3.get_result())
    print(stdout_dict, type(stdout_dict))
-   
  ################################test.yml 文件
- - hosts: web
+- hosts: web
   gather_facts: F   #开启debug
   tasks:
   - name: nslookup
-    shell: nslookup {domain}
+    shell: nslookup {{ domain }}
     ignore_errors: True
     register: tomcat_out  #定义变量存储返回的结果
   ########################################## hosts 文件
