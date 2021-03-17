@@ -176,3 +176,50 @@ if __name__ == '__main__':
   ########################################## hosts 文件
  [web]
 172.16.10.122 ansible_ssh_pass="*********"
+########################################执行结果为
+[root@master02 ~]# python3  ansible2.py 
+{
+    "success": {
+        "172.16.10.23": {
+            "changed": true,
+            "end": "2021-03-17 14:28:43.067796",
+            "stdout": "PING www.wshifen.com (104.193.88.77) 56(84) bytes of data.\n64 bytes from 104.193.88.77: icmp_seq=1 ttl=51 time=269 ms\n\n--- www.wshifen.com ping statistics ---\n1 packets transmitted, 1 received, 0% packet loss, time 305ms\nrtt min/avg/max/mdev = 269.865/269.865/269.865/0.000 ms",
+            "cmd": "ping -c 1 www.baidu.com",
+            "rc": 0,
+            "start": "2021-03-17 14:28:42.708268",
+            "stderr": "",
+            "delta": "0:00:00.359528",
+            "invocation": {
+                "module_args": {
+                    "creates": null,
+                    "executable": null,
+                    "_uses_shell": true,
+                    "strip_empty_ends": true,
+                    "_raw_params": "ping -c 1 www.baidu.com",
+                    "removes": null,
+                    "argv": null,
+                    "warn": true,
+                    "chdir": null,
+                    "stdin_add_newline": true,
+                    "stdin": null
+                }
+            },
+            "stdout_lines": [
+                "PING www.wshifen.com (104.193.88.77) 56(84) bytes of data.",
+                "64 bytes from 104.193.88.77: icmp_seq=1 ttl=51 time=269 ms",
+                "",
+                "--- www.wshifen.com ping statistics ---",
+                "1 packets transmitted, 1 received, 0% packet loss, time 305ms",
+                "rtt min/avg/max/mdev = 269.865/269.865/269.865/0.000 ms"
+            ],
+            "stderr_lines": [],
+            "ansible_facts": {
+                "discovered_interpreter_python": "/usr/bin/python"
+            },
+            "_ansible_no_log": false
+        }
+    },
+    "failed": {},
+    "unreachable": {}
+}
+{'success': {'172.16.10.23': {'changed': True, 'end': '2021-03-17 14:28:43.067796', 'stdout': 'PING www.wshifen.com (104.193.88.77) 56(84) bytes of data.\n64 bytes from 104.193.88.77: icmp_seq=1 ttl=51 time=269 ms\n\n--- www.wshifen.com ping statistics ---\n1 packets transmitted, 1 received, 0% packet loss, time 305ms\nrtt min/avg/max/mdev = 269.865/269.865/269.865/0.000 ms', 'cmd': 'ping -c 1 www.baidu.com', 'rc': 0, 'start': '2021-03-17 14:28:42.708268', 'stderr': '', 'delta': '0:00:00.359528', 'invocation': {'module_args': {'creates': None, 'executable': None, '_uses_shell': True, 'strip_empty_ends': True, '_raw_params': 'ping -c 1 www.baidu.com', 'removes': None, 'argv': None, 'warn': True, 'chdir': None, 'stdin_add_newline': True, 'stdin': None}}, 'stdout_lines': ['PING www.wshifen.com (104.193.88.77) 56(84) bytes of data.', '64 bytes from 104.193.88.77: icmp_seq=1 ttl=51 time=269 ms', '', '--- www.wshifen.com ping statistics ---', '1 packets transmitted, 1 received, 0% packet loss, time 305ms', 'rtt min/avg/max/mdev = 269.865/269.865/269.865/0.000 ms'], 'stderr_lines': [], 'ansible_facts': {'discovered_interpreter_python': '/usr/bin/python'}, '_ansible_no_log': False}}, 'failed': {}, 'unreachable': {}} <class 'dict'>
