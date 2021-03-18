@@ -251,3 +251,12 @@ EOF
 
 备份数据库运行的备份克隆恢复任务
 30 07 * * *  /home/oracle/recover_db.sh
+
+
+#####每3分钟备份一下当天的归档日志脚本 archivelog_rsync.sh 
+#/bin/bash
+export BACKUP_DATE=`date +%Y_%m_%d`
+/bin/rsync  -vzrtopg --delete /home/u01/app/oracle/fast_recovery_area/DGTESTDG/archivelog/$BACKUP_DATE/  oracle@172.16.10.131:/home/u01/app/oracle/fast_recovery_area/DGTESTDG/archivelog/$BACKUP_DATE/
+
+*/3 * * * * flock -xn /tmp/sites.lock1 -c "/home/oracle/sh/archivelog_rsync.sh"
+
