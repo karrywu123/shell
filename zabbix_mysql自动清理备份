@@ -51,3 +51,24 @@ optimize table trends_uint;
 DELETE FROM events WHERE clock < $Date;
 optimize table events;
 "
+
+
+##############
+#####################
+mysql8.0
+
+创建用户
+create user 'test'@'127.0.0.1' identified by '123456';
+create user 'test'@'localhost' identified by '123456';
+create user 'test'@'%' identified by '123456';
+给用户授权
+grant all on *.* to 'test'@'127.0.0.1' with grant option;
+grant all on *.* to 'test'@'localhost' with grant option;
+grant all on *.* to 'test'@'%' with grant option;
+创建数据库
+create database test default character set = utf8;
+权当前用户拥有mysql2018这个数据库的所有权限
+
+grant all privileges on test.* to test@127.0.0.1;
+
+flush privileges;
