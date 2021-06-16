@@ -1,0 +1,49 @@
+#!/bin/bash
+
+
+num=`ping  -c 10 10.252.10.4 | grep icmp_seq|awk '{print $7}'|cut -d= -f2`
+num1=`ping  -c 10 10.252.10.4  | grep packet | awk '{print $6}'`
+
+
+
+func1(){
+for snum in $num
+do
+ if [ `echo "${snum}>100"|bc`  -eq 1 ];
+ then
+  echo "延时大于100s，现在为${snum}";
+  ansible-playbook /home/shell/ansible-playbook/hosts.yaml -e "ip='69.172.91.136'"
+ else
+  echo "延时小于100s，现在为${snum}";
+  ansible-playbook /home/shell/ansible-playbook/hosts.yaml -e "ip='10.252.10.4'"
+ fi
+done
+}
+
+if [ $num1 == '100%' ];
+then
+        echo "专线断线"
+        echo "切回普通线路 69.172.91.136 "
+        ansible-playbook /home/shell/ansible-playbook/hosts.yaml -e "ip='69.172.91.136'"
+else
+        echo "继续检测专线"
+        func1
+fi
+
+
+#############
+
+hosts.j2
+
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+
+{{ ip }}    www.baidu.com
+##################
+hosts.yaml
+
+- hosts: myserver
+  remote_user: root
+  tasks:
+  - name: templete hosts
+    template: src=/home/shell/ansible-playbook/hosts.j2 dest=/etc/hosts
