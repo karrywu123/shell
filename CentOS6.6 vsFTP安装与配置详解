@@ -1,0 +1,175 @@
+CentOS6.6 vsFTP安装与配置详解
+CentOS6.6 vsFTP安装与配置
+
+
+第一步：安装vsftp pam db4
+yum install vsftpd pam* db4* -y
+使用命令将vsftp配置为系统服务
+chkconfig --level 35 vsftpd on
+
+第二步：配置vsftpd服务的宿主
+#useradd vsftpd -s /sbin/nologin
+这个vsftpd只是用来替换root的，并不需要登录
+
+第三步：建立ftp虚拟宿主帐户
+#useradd ftpuser -s /sbin/nologin
+这ftpuser只个虚拟帐户的宿主，本身是不用登录的
+
+第四步：配置vsftpd.conf
+更改配置前最好备份一下然后再改
+vi /etc/vsftpd/vsftpd.conf
+
+anonymous_enable=NO
+local_enable=YES
+write_enable=YES
+local_umask=022
+anon_upload_enable=NO
+anon_mkdir_write_enable=NO
+dirmessage_enable=YES
+xferlog_enable=YES
+connect_from_port_20=YES
+#chown_uploads=YES
+#chown_username=whoever
+#xferlog_file=/var/log/xferlog
+xferlog_std_format=YES
+#idle_session_timeout=600
+#data_connection_timeout=120
+#nopriv_user=ftpsecure
+#async_abor_enable=YES
+#ascii_upload_enable=YES
+#ascii_download_enable=YES
+#ftpd_banner=Welcome to blah FTP service.
+#deny_email_enable=YES
+#banned_email_file=/etc/vsftpd/banned_emails
+chroot_list_enable=YES
+chroot_list_file=/etc/vsftpd/chroot_list
+chroot_local_user=YES
+#ls_recurse_enable=YES
+listen=YES
+#listen_ipv6=YES
+ 
+pam_service_name=vsftpd
+userlist_enable=YES
+tcp_wrappers=YES
+ 
+guest_enable=YES
+guest_username=vsftpd
+virtual_use_local_privs=YES
+user_config_dir=/etc/vsftpd/vconf
+
+max_clients=1
+max_per_ip=1
+local_max_rate=10000
+
+
+第五步：建立日志文件
+#touch /var/log/vsftpd.log    //日志文件
+#chown vsftpd.vsftpd /var/log/vsftpd.log   //属于vsftpd这个宿主
+
+第六步：建立虚拟用户文件
+#mkdir /etc/vsftpd/vconf/
+#touch /etc/vsftpd/vconf/vir_user
+
+第七步：建立虚拟用户
+#vi /etc/vsftpd/vconf/vir_user
+virtualuser           //用户名
+12345678           //密码
+
+注意：第一行用户名，第二行是上一行用户名的密码，其他人的以此类推
+
+第八步：生成数据库
+#db_load -T -t hash -f /etc/vsftpd/vconf/vir_user /etc/vsftpd/vconf/vir_user.db
+#chmod 600 /etc/vsftpd/vconf/vir_user.db
+#chmod 600 /etc/vsftpd/vconf/vir_user
+
+第九步：修改/etc/pam.d/vsftpd内容
+# vi /etc/pam.d/vsftpd
+# 注释掉其他部分
+auth required /lib/security/pam_userdb.so db=/etc/vsftpd/vconf/vir_user
+account required /lib/security/pam_userdb.so db=/etc/vsftpd/vconf/vir_user
+
+
+第十步：创建用户的配置文件
+注意：用户配置文件的名字要和创建的“虚拟用户”名字对应
+#touch /etc/vsftpd/vconf/virtualuser
+#vi /etc/vsftpd/vconf/virtualuser
+输入：
+local_root=/var/ftp/virtualuser           //虚拟用户的个人目录路径
+anonymous_enable=NO
+write_enable=YES
+local_umask=022
+anon_upload_enable=NO
+anon_mkdir_write_enable=NO
+idle_session_timeout=600
+data_connection_timeout=120
+max_clients=10
+max_per_ip=5
+local_max_rate=1048576     //本地用户的最大传输速度，单位是Byts/s，我设定的是10M
+
+ 
+
+第十一步：建立虚拟用户目录
+如果不建立虚拟用户的个人目录，那么所有的虚拟用户登录后所在的目录都是同一个目录下
+# mkdir /var/ftp/virtualuser
+# chown ftpuser.ftpuser ./virtualuser
+# chmod 700 /var/ftp/virtualuser
+配置就此完成，如果想增加新的用户，只要按照上面的第七步、第十步进行就可以了。
+
+
+第十二步：ftp防火墙设置
+#modprobe nf_conntrack_ftp
+
+iptables   -A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+iptables   -A INPUT -p tcp -m state --state NEW -m tcp --dport 21 -j ACCEPT
+###########################################################
+vsftpd相关文件
+vsftpd相关文件	文件说明
+/etc/vsftpd/vsftpd.conf	主配置文件
+/usr/sbin/vsftpd	Vsftpd的主程序。
+/etc/pam.d/vsftpd	PAM认证文件（此文件中file=/etc/vsftpd/ftpusers字段，指明阻止访问的用户来自/etc/vsftpd/ftpusers文件中的用户）
+/etc/vsftpd/ftpusers	禁止使用vsftpd的用户列表文件。记录不允许访问FTP服务器的用户名单，管理员可以把一些对系统安全有威胁的用户账号记录在此文件中，以免用户从FTP登录后获得大于上传下载操作的权利，而对系统造成损坏。
+/etc/vsftpd/user_list	禁止或允许使用vsftpd的用户列表文件。这个文件中指定的用户缺省情况（即在/etc/vsftpd/vsftpd.conf中设置 userlist_deny=YES）下也不能访问FTP服务器，在设置了userlist_deny=NO时,仅允许user_list中指定的用户访 问FTP服务器。
+/var/ftp	vsftpd的匿名用户登录根目录。
+#####################################################
+vsftp配置
+参数配置	默认值	说明
+anonymous_enable=YES	YES	是否用于匿名用户(ftp或anonymous)登录FTP，登录后进入/var/ftp
+local_enable=YES	NO	是否允许本地用户登录FTP服务器，登录后进入用户主目录
+write_enable=YES	NO	是否允许写入
+local_umask=022	077	默认的umask码
+anon_upload_enable=YES	NO	是否允许匿名用户上传文件。如果此项要生效，则配置write_enable必须激活。并且匿名用户所在相关目录有写权限。
+anon_mkdir_write_enable=YES	NO	是否允许匿名用户创建新目录。如果此项要生效，则配置write_enable必须激活。并且匿名用户所在相关目录有写权限。
+dirmessage_enable=YES	NO	是否激活目录欢迎信息功能。.message文件可以通过更改message_file来调整。
+xferlog_enable=YES	NO	是否启动记录上传和下载日志。
+connect_from_port_20=YES	20	设定PORT模式下的连接端口(只要connect_from_port_20被激活)。
+chown_uploads=YES	NO	设定是否允许改变上传文件的属主，与下面一个设定项配合使用
+chown_username=whoever	ROOT	置想要改变的上传文件的属主，如果需要，则输入一个系统用户名，例如可以把上传的文件都改成root属主。whoever：任何人
+xferlog_file=/var/log/xferlog	/var/log/xferlog	设置日志文件的文件名和存储路径
+xferlog_std_format=YES	NO	是否使用标准的ftpd xferlog日志文件格式
+idle_session_timeout=600	300	设置空闲的用户会话中断时间,默认是10分钟
+data_connection_timeout=120	300	设置数据连接超时时间,默认是120秒
+nopriv_user=ftpsecure	nobody	运行vsftpd需要的非特权系统用户
+async_abor_enable=YES	NO	是否允许运行特殊的ftp命令async ABOR。
+ascii_upload_enable=YES
+
+ascii_download_enable=YES	NO	是否使用ascii码方式上传和下载文件。
+deny_email_enable=YES
+
+banned_email_file=/etc/vsftpd/banned_emails	NO	禁止匿名用户通过banned_email_file定义的邮件地址做密码
+chroot_list_enable=YES
+chroot_list_file=/etc/vsftpd/chroot_list	NO	设置为NO时，用户登录FTP后具有访问自己目录以外的其他文件的权限；设置为YES时，chroot_list_file中的用户列表被锁定在 自己的home目录下。此时chroot_local_user=NO，如果chroot_local_user=YES则 chroot_list_file中的用户将不被锁定在home目录下。
+ls_recurse_enable=YES	NO	是否允许递归查询
+listen=YES	NO	vsftpd 处于独立启动模式
+listen_ipv6=YES	NO	是否支持IPV6
+pam_service_name=vsftpd	ftp	设定vsftpd将要用到的PAM服务的名字。
+userlist_enable=YES	NO	设置为YES，vsftpd将读取userlist_file参数所指定的文件中的用户列表。当列表中的用户登录FTP服务器时，该用户在提示输 入密码之前就被禁止了。即该用户名输入后，vsftpd查到该用户名在列表中，vsftpd就直接禁止掉该用户，不会再进行询问密码等后续步聚
+userlist_deny=YES	YES	决定禁止还是只允许由userlist_file指定文件中的用户登录FTP服务器。此选项在userlist_enable 选项启动后才生效。YES，默认值，禁止文件中的用户登录，同时也不向这些用户发出输入密码的提示。NO，只允许在文件中的用户登录FTP服务器
+userlist_file	/etc/vsftpd/user_list	当userlist_enable被激活，系统将去这里调用文件。
+tcp_wrappers=YES	NO	是否允许tcp_wrappers管理
+listen_port	21	如果vsftpd处于独立运行模式，这个端口设置将监听的FTP连接请求。
+max_clients	0	FTP的最大连接数，0为无限制。
+max_per_ip	0	单个IP的最大连接数。
+anon_max_rate	0	匿名用户允许的最大传输速度，单位：字节/秒
+local_max_rate	0	本地认证用户允许的最大传输速度，单位：字节/秒。
+ 
+
