@@ -1,0 +1,54 @@
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"io/ioutil"
+	"os/exec"
+)
+
+type Charset string
+
+const (
+	UTF8    = Charset("UTF-8")
+	GB18030 = Charset("GB18030")
+)
+var str string
+func main() {
+	command := "ping"
+	params := []string{"www.baidu.com","-c 3"}
+	cmd := exec.Command(command, params...)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	cmd.Start()
+	in := bufio.NewScanner(stdout)
+	for in.Scan() {
+		cmdRe:=ConvertByte2String(in.Bytes(),"GB18030")
+		fmt.Println(cmdRe)
+		str=str+cmdRe+"\n"
+	}
+	content := []byte(str)
+	err = ioutil.WriteFile("ping.txt", content,0644)
+	if err != nil {
+		panic(err)
+	}
+	cmd.Wait()
+}
+
+func ConvertByte2String(byte []byte, charset Charset) string {
+	var str string
+	switch charset {
+	case GB18030:
+		var decodeBytes,_=simplifiedchinese.GB18030.NewDecoder().Bytes(byte)
+		str= string(decodeBytes)
+	case UTF8:
+		fallthrough
+	default:
+		str = string(byte)
+	}
+	return str
+}
