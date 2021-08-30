@@ -1,0 +1,123 @@
+首先开启归档：
+SQL> archive log list   
+Database log mode              Archive Mode
+Automatic archival             Enabled
+Archive destination            /u01/app/oracle/archive
+Oldest online log sequence     35
+Next log sequence to archive   37
+Current log sequence           37
+
+
+检查数据库是否suppplemental logging
+SQL> SELECT SUPPLEMENTAL_LOG_DATA_MIN FROM V$DATABASE;
+SUPPLEME
+-------
+NO
+SQL> ALTER DATABASE ADD SUPPLEMENTAL LOG DATA;
+Database altered.
+SQL> SELECT SUPPLEMENTAL_LOG_DATA_MIN FROM V$DATABASE;
+SUPPLEME
+--------
+YES
+逆向操作为：
+ALTER DATABASE DROP SUPPLEMENTAL LOG DATA;
+
+
+方法一：
+创建测试表，在每次commit后运行切换一次日志：
+SQL> create table t5 (name varchar2(10));
+Table created.
+SQL> insert into t5 values('abc');
+1 row created.
+SQL> commit;
+Commit complete.
+SQL> insert into t5 values('ycr');
+1 row created.
+SQL> commit;
+Commit complete.
+SQL> delete from t5 where name='abc';
+1 row deleted.
+SQL> commit;
+Commit complete.
+SQL> select * from t5;
+NAME
+----------
+ycr
+
+
+使用sysdba执行,注意此执行过程只能在一个session中执行：
+execute dbms_logmnr.add_logfile(logfilename=>'/u01/app/oracle/archive/1_37_915332259.dbf',options=>dbms_logmnr.new);
+execute dbms_logmnr.add_logfile(logfilename=>'/u01/app/oracle/archive/1_38_915332259.dbf',options=>dbms_logmnr.addfile); 
+execute dbms_logmnr.add_logfile(logfilename=>'/u01/app/oracle/archive/1_39_915332259.dbf',options=>dbms_logmnr.addfile); 
+如需移除日志使用
+execute dbms_logmnr.remove_logfile(logfilename=>'日志文件');
+查看要分析的日志：
+select * from v$logmnr_logs; 
+启动logminer
+execute dbms_logmnr.start_logmnr(Options => DBMS_LOGMNR.DICT_FROM_ONLINE_CATALOG)
+启动分析时还可以指定时间或者scn
+execute dbms_logmnr.start_logmnr(Options => DBMS_LOGMNR.DICT_FROM_ONLINE_CATALOG,starttime => to_date(’02-Apr-2010 09:30:00’,’DD-MON-YYYY HH:MI:SS’),endtime => to_date(’02-Apr-2010 19:30:00’,’DD-MON-YYYY HH:MI:SS’)); 
+execute dbms_logmnr.start_logmnr(Options => DBMS_LOGMNR.DICT_FROM_ONLINE_CATALOG ,startscn => 3231808,endscn => 3231813);
+查看分析结果
+select username,scn,timestamp,sql_redo,sql_undo from v$logmnr_contents t where t.USERNAME='TEST';
+关闭logminer
+execute dbms_logmnr.end_logmnr;
+
+
+方法二：
+SQL>  show parameter utl;
+NAME                                 TYPE        VALUE
+------------------------------------ ----------- ------------------------------
+create_stored_outlines               string
+utl_file_dir                         string
+
+
+alter system set utl_file_dir='/u01/app/oracle/utl' scope=spfile;
+重启数据库并启动所有pdb
+alter pluggable database pdb2,pdbycr open;
+建立字典文件：
+execute dbms_logmnr_d.build('dic.ora','/u01/app/oracle/utl',options => dbms_logmnr_d.store_in_flat_file);
+同方法一相同添加要分析的日志后，开始分析,剩余步骤均与方法一相同，其中开始分析的方法略不同：
+exec dbms_logmnr.start_logmnr(dictfilename =>'/u01/app/oracle/utl/dic.ora');
+使用此种方法无法查询出普通用户，比如TEST中的相关数据，只能查询出sys中数据
+
+
+
+
+同一种方法还可以分析在线日志：
+创建测试环境：
+SQL> create table t6 (name varchar2(10));
+Table created.
+SQL> insert into t6 values ('abce');
+1 row created.
+SQL> insert into t6 values ('ycr1');
+1 row created.
+SQL> insert into t6 values ('ycr2');
+1 row created.
+SQL> commit;
+Commit complete.
+SQL> 
+SQL> delete from t6 where name='ycr2';
+1 row deleted.
+SQL> select * from t6;
+NAME
+----------
+abce
+ycr1
+SQL> commit;
+Commit complete.
+查看当前日志：
+col group# for 99
+col status for a20
+col member for a50
+select l.group#,l.status,f.member from v$log l,v$logfile f where l.GROUP#=f.GROUP#;
+添加文件
+execute dbms_logmnr.add_logfile(logfilename=>'/u01/app/oracle/oradata/ycr/redo01.log',options=>dbms_logmnr.new);
+execute dbms_logmnr.add_logfile(logfilename=>'/u01/app/oracle/oradata/ycr/redo02.log',options=>dbms_logmnr.addfile); 
+开始分析
+execute dbms_logmnr.start_logmnr(Options => DBMS_LOGMNR.DICT_FROM_ONLINE_CATALOG)
+查看分析结果
+select username,scn,timestamp,sql_redo,sql_undo from v$logmnr_contents t where t.USERNAME='TEST'
+关闭logminer
+execute dbms_logmnr.end_logmnr;
+
