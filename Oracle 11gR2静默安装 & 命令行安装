@@ -1,0 +1,414 @@
+
+    Oracle 11gR2静默安装 & 命令行安装   
+       静默安装
+经常搭建Oracle测试环境，有时候觉得OUI（即图形界面）方式甚是繁琐，你得一步一步进行确认，所幸，Oracle支持静默安装。在我看来，它主要有两方面的好处：一、极大地提升了效率，尤其是批量安装。二、很多时候，只有终端环境可供使用。
+一、准备responseFile文件
+    从Oracle软件中获取文件模板
+[oracle@localhost ~]$ cd database/
+[oracle@localhost database]$ ls
+install  readme.html  response  rpm  runInstaller  sshsetup  stage  welcome.html
+[oracle@localhost database]$ cd response/
+[oracle@localhost response]$ ls
+dbca.rsp  db_install.rsp  netca.rsp
+
+   其中database是Oracle软件解压后生成的目录。可见在response目录下有三个模板，其中dbca.rsp是用来创建数据库的。db_install.rsp是用来安装Oracle软件的。netca.rsp是用来创建监听器的。当然也可在db_install.rsp中直接创建数据库。在这里，为求方便，我们选择db_install.rsp模板一并安装软件，创建数据库。
+
+二、编辑responseFile文件
+db_install.rsp
+oracle.install.responseFileVersion=/oracle/install/rspfmt_dbinstall_response_schema_v11_2_0
+oracle.install.option=INSTALL_DB_AND_CONFIG
+ORACLE_HOSTNAME=localhost.localdomain
+UNIX_GROUP_NAME=oinstall
+INVENTORY_LOCATION=/home/u01/app/oraInventory
+SELECTED_LANGUAGES=en,zh_CN
+ORACLE_HOME=/home/u01/app/oracle/product/11.2.0/dbhome_1
+ORACLE_BASE=/home/u01/app/oracle
+oracle.install.db.InstallEdition=EE
+oracle.install.db.EEOptionsSelection=false
+oracle.install.db.optionalComponents=oracle.rdbms.partitioning:11.2.0.4.0,oracle.oraolap:11.2.0.4.0,oracle.rdbms.dm:11.2.0.4.0,oracle.rdbms.dv:11.2.0.4.0,oracle.rdbms.lbac:11.2.0.4.0,oracle.rdbms.rat:11.2.0.4.0
+oracle.install.db.DBA_GROUP=dba
+oracle.install.db.OPER_GROUP=oper
+oracle.install.db.CLUSTER_NODES=
+oracle.install.db.isRACOneInstall=
+oracle.install.db.racOneServiceName=
+oracle.install.db.config.starterdb.type=GENERAL_PURPOSE
+oracle.install.db.config.starterdb.globalDBName=ora11gdb
+oracle.install.db.config.starterdb.SID=ora11gdb
+oracle.install.db.config.starterdb.characterSet=AL32UTF8
+oracle.install.db.config.starterdb.memoryOption=true
+oracle.install.db.config.starterdb.memoryLimit=5000
+oracle.install.db.config.starterdb.installExampleSchemas=false
+oracle.install.db.config.starterdb.enableSecuritySettings=true
+oracle.install.db.config.starterdb.password.ALL=Aadb123321
+oracle.install.db.config.starterdb.password.SYS=
+oracle.install.db.config.starterdb.password.SYSTEM=
+oracle.install.db.config.starterdb.password.SYSMAN=
+oracle.install.db.config.starterdb.password.DBSNMP=
+oracle.install.db.config.starterdb.control=DB_CONTROL
+oracle.install.db.config.starterdb.gridcontrol.gridControlServiceURL=
+oracle.install.db.config.starterdb.automatedBackup.enable=false
+oracle.install.db.config.starterdb.automatedBackup.osuid=
+oracle.install.db.config.starterdb.automatedBackup.ospwd=
+oracle.install.db.config.starterdb.storageType=FILE_SYSTEM_STORAGE
+oracle.install.db.config.starterdb.fileSystemStorage.dataLocation=/home/u01/app/oracle/oradata
+oracle.install.db.config.starterdb.fileSystemStorage.recoveryLocation=/home/u01/app/oracle/fast_recovery_area
+oracle.install.db.config.asm.diskGroup=
+oracle.install.db.config.asm.ASMSNMPPassword=
+MYORACLESUPPORT_USERNAME=
+MYORACLESUPPORT_PASSWORD=
+SECURITY_UPDATES_VIA_MYORACLESUPPORT=
+DECLINE_SECURITY_UPDATES=true
+PROXY_HOST=
+PROXY_PORT=
+PROXY_USER=
+PROXY_PWD=
+PROXY_REALM=
+COLLECTOR_SUPPORTHUB_URL=
+oracle.installer.autoupdates.option=SKIP_UPDATES
+oracle.installer.autoupdates.downloadUpdatesLoc=
+AUTOUPDATES_MYORACLESUPPORT_USERNAME=
+AUTOUPDATES_MYORACLESUPPORT_PASSWORD=
+##########################################################################################
+
+responseFile文件 的配置详解
+oracle.install.responseFileVersion=/oracle/install/rspfmt_dbinstall_response_schema_v11_2_0//标注响应文件版本
+ oracle.install.option=INSTALL_DB_SWONLY//.只装数据库软件
+ ORACLE_HOSTNAME=主机名
+ UNIX_GROUP_NAME=oinstall//指定oracle inventory目录的所有者
+ INVENTORY_LOCATION=/u01/app/oraInventory指定产品清单oracle inventory目录的路径
+ SELECTED_LANGUAGES=en,zh_CN//指定语言
+ ORACLE_HOME=/u01/app/oracle/product/11.2.0/db_home1//设置ORALCE_HOME的路径
+ ORACLE_BASE=/u01/app/oracle//指定ORALCE_BASE的路径
+ oracle.install.db.InstallEdition=EE//安装数据库软件的版本，企业版
+ oracle.install.db.EEOptionsSelection=false//手动指定企业安装组件
+ oracle.install.db.optionalComponents=oracle.rdbms.partitioning:11.2.0.4.0,oracle.oraolap:11.2.0.4.0,oracle.rdbms.dm:11.2.0.4.0,oracle.rdbms.dv:11.2.0.4.0,oracle.rdbms.lbac:11.2.0.4.0,oracle.rdbms.rat:11.2.0.4.0//如果上面选true，这些就是手动指定的组件
+ oracle.install.db.DBA_GROUP=dba//指定拥有DBA用户组，通常会是dba组
+ oracle.install.db.OPER_GROUP=oper//指定oper用户组
+ oracle.install.db.CLUSTER_NODES=//指定所有的节点
+ oracle.install.db.isRACOneInstall=false//是否是RACO方式安装
+ oracle.install.db.racOneServiceName=
+ oracle.install.db.config.starterdb.type=//选择数据库的用途，一般用途/事物处理，数据仓库
+ oracle.install.db.config.starterdb.globalDBName=指定GlobalName
+ oracle.install.db.config.starterdb.SID=//你指定的SID
+ oracle.install.db.config.starterdb.characterSet=AL32UTF8//设置数据库编码
+ oracle.install.db.config.starterdb.memoryOption=true//11g的新特性自动内存管理，也就是SGA_TARGET和PAG_AGGREGATE_TARGET都，不用设置了，Oracle会自动调配两部分大小
+ oracle.install.db.config.starterdb.memoryLimit=指定Oracle自动管理内存的大小
+ oracle.install.db.config.starterdb.installExampleSchemas=false是否载入模板示例
+ oracle.install.db.config.starterdb.enableSecuritySettings=true  是否启用安全设置
+ oracle.install.db.config.starterdb.password.ALL=123456所有用户名的密码
+ oracle.install.db.config.starterdb.password.SYS=
+ oracle.install.db.config.starterdb.password.SYSTEM=
+ oracle.install.db.config.starterdb.password.SYSMAN=
+ oracle.install.db.config.starterdb.password.DBSNMP=
+ oracle.install.db.config.starterdb.control=DB_CONTROL数据库本地管理工具DB_CONTROL，远程集中管理工具GRID_CONTROL
+ oracle.install.db.config.starterdb.gridcontrol.gridControlServiceURL=GRID_CONTROL需要设定grid control的远程路径URL
+ oracle.install.db.config.starterdb.automatedBackup.enable=false设置自动备份
+ oracle.install.db.config.starterdb.automatedBackup.osuid=.自动备份会启动一个job，指定启动JOB的系统用户ID
+ oracle.install.db.config.starterdb.automatedBackup.ospwd=自动备份会开启一个job，需要指定OSUser的密码
+ oracle.install.db.config.starterdb.storageType=要求指定使用的文件系统存放数据库文件还是ASM
+ oracle.install.db.config.starterdb.fileSystemStorage.dataLocation=使用文件系统存放数据库文件才需要指定数据文件、控制文件、Redo log的存放目录
+ oracle.install.db.config.starterdb.fileSystemStorage.recoveryLocation=使用文件系统存放数据库文件才需要指定备份恢复目录
+ oracle.install.db.config.asm.diskGroup=使用ASM存放数据库文件才需要指定存放的磁盘组
+ oracle.install.db.config.asm.ASMSNMPPassword=使用ASM存放数据库文件才需要指定ASM实例密码
+ MYORACLESUPPORT_USERNAME=指定metalink账户用户名
+ MYORACLESUPPORT_PASSWORD=指定metalink账户密码
+ SECURITY_UPDATES_VIA_MYORACLESUPPORT=用户是否可以设置metalink密码
+ DECLINE_SECURITY_UPDATES=true是否设置安全更新，
+ PROXY_HOST=代理服务器名
+ PROXY_PORT=代理服务器端口
+ PROXY_USER=代理服务器用户名
+ PROXY_PWD=代理服务器密码
+ PROXY_REALM=
+ COLLECTOR_SUPPORTHUB_URL=
+ oracle.installer.autoupdates.option=自动更新
+ oracle.installer.autoupdates.downloadUpdatesLoc=自动更新下载目录
+ AUTOUPDATES_MYORACLESUPPORT_USERNAME=自动更新的用户名
+ AUTOUPDATES_MYORACLESUPPORT_PASSWORD=自动更新的密码
+##########################################################
+三、 静默安装
+      [oracle@node2 database]$ ./runInstaller -help
+      如果对runInstaller的参数不是很了解的话，可通过该命令进行查看。
+
+[oracle@localhost database]$ ./runInstaller -help
+Preparing to launch Oracle Universal Installer from /tmp/OraInstall2018-06-02_06-38-05PM. Please wait ...[oracle@localhost database]$ Usage: 
+runInstaller  [-options] [(<CommandLineVariable=Value>)*]
+
+Where options include:
+  -clusterware oracle.crs,<crs version>  
+        Version of Cluster ready services installed.
+
+  -crsLocation <Path>  
+        Used only for cluster installs, specifies the path to the crs home location. Specifying this overrides CRS information obtained from central inventory.
+
+  -invPtrLoc <full path of oraInst.loc>  
+        Unix only. To point to a different inventory location. The orainst.loc file contains:
+inventory_loc=<location of central inventory>
+inst_group=<> 
+
+  -jreLoc <location>  
+        Path where Java Runtime Environment is installed. OUI cannot be run without it.
+
+  -logLevel <level>  
+        To filter log messages that have a lesser priority level than <level>. Valid options are: severe, warning, info, config, fine, finer, finest, basic, general, detailed, trace. The use of basic, general, detailed, trace is deprecated.
+
+  -paramFile <location of file>  
+        Specify location of oraparam.ini file to be used by OUI.
+
+  -responseFile <Path>  
+        Specifies the response file and path to use.
+
+  -attachHome  
+        For attaching homes to the OUI inventory.
+
+  -cfs  
+        Indicates that the Oracle home specified is on cluster file system (shared). This is mandatory when '-local' is specified so that Oracle Universal Installer can register the home appropriately into the inventory.
+
+  -clone  
+        For making an Oracle Home copy match its current environment.
+
+  -debug  
+        For getting the debug information from OUI.
+
+  -detachHome  
+        For detaching homes from the OUI inventory without deleting inventory directory inside Oracle home.
+
+  -enableRollingUpgrade  
+        Used in cluster environment, to enable upgrade of a product on a subset of nodes (on which the product was installed). 
+
+  -executeSysPrereqs  
+        Execute system pre-requisite checks and exit.
+
+  -force  
+        Allowing silent mode installation into a non-empty directory.
+
+  -help  
+        Displays above usage.
+
+  -ignoreSysPrereqs  
+        For ignoring the results of the system pre-requisite checks.
+
+  -local  
+        Performs the operation on the local node irrespective of the cluster nodes specified.
+
+  -printdiskusage  
+        Log debug information for disk usage.
+
+  -printmemory  
+        Log debug information for memory usage.
+
+  -printtime  
+        Log debug information for time usage.
+
+  -relink  
+        For performing relink actions on the oracle home 
+         Usage: -relink -maketargetsxml <location of maketargetsxml> [-makedepsxml <location of makedepsxml>] [name=value] 
+
+  -silent  
+        For silent mode operations, the inputs can be a response file or a list of command line variable value pairs.
+
+  -waitforcompletion  
+        Installer will wait for completion instead of spawning the java engine and exiting.
+
+  -suppressPreCopyScript  
+        Suppress the execution of precopy script.
+
+  -acceptUntrustedCertificates  
+        Accept untrusted certificates from a secure site.
+
+  -suppressPostCopyScript  
+        Suppress the execution of postcopy script.
+
+  -noconfig  
+        Do not execute config tools.
+
+  -noconsole  
+        For suppressing display of messages to console. Console is not allocated.
+
+  -formCluster  
+        To install the Oracle clusterware in order to form the cluster.
+
+  -remotecp <Path>  
+        Unix specific option. Used only for cluster installs, specifies the path to the remote copy program on the local cluster node.
+
+  -remoteshell <Path>  
+        Unix specific option. Used only for cluster installs, specifies the path to the remote shell program on the local cluster node.
+
+  -executePrereqs
+        To execute only the prerequisite checks.
+
+  -ignorePrereq
+        To ignore running the prerequisite checks.
+
+  -ignoreInternalDriverError
+        To ignore any internal driver errors.
+
+  -downloadUpdates
+        To download updates only.
+
+  -showProgress
+        To show the installation progress on the console. This option is supported only in case of silent installation.
+
+Command Line Variables Usage
+  Command line variables are specified using <name=value>; for example:
+    [ session: | compName: | compName:version: ]variableName=" valueOfVariable"]
+
+   Session/Installer variables are specified using:
+          [session:]varName=value
+    Ex 1: session:ORACLE_HOME_NAME="OraHome"
+    Ex 2: ORACLE_HOME_NAME="OraHome"
+    The lookup order is session:varName then just varName. The session prefix is used to avoid ambiguity.
+
+   Component variables are specified using:
+          [compInternalName:[Version:]]varName
+    Ex 1: oracle.comp1:1.0.1:varName="VarValue"
+    Ex 2: oracle.comp1:varName="VarValue"
+    The lookup order is compInternalName:Version:varName, then compInternalName:varName, then just varName.
+    
+    开始静默安装
+    [oracle@node2 database]$ ./runInstaller -silent -ignoreSysPrereqs -showProgress -responseFile /home/oracle/database/response/db_install.rsp
+    其中-silent指的是静默安装，-ignorePrereq忽略prerequisite的检查结果，showProgress显示进度，responseFile是种子文件。
+
+  最后，需root用户手动执行以下两个文件：
+    1. /u01/app/oracle/oraInventory/orainstRoot.sh
+    2. /u01/app/oracle/product/11.2.0.1/db_1/root.sh
+    当然，也可查看/u01/app/oracle/oraInventory/logs/installActions2015-04-01_10-13-42PM.log了解具体的安装信息。
+
+命令行安装
+首先来看dbca命令行支持哪些参数。
+[oracle@localhost ~]$ dbca -help
+dbca  [-silent | -progressOnly | -customCreate] {<command> <options> }  | { [<command> [options] ] -responseFile  <response file > } [-continueOnNonFatalErrors <true | false>]
+Please refer to the manual for details.
+You can enter one of the following command:
+
+Create a database by specifying the following parameters:
+        -createDatabase
+                -templateName <name of an existing template in default location or the complete template path>
+                [-cloneTemplate]
+                -gdbName <global database name>
+                [-sid <database system identifier>]
+                [-sysPassword <SYS user password>]
+                [-systemPassword <SYSTEM user password>]
+                [-emConfiguration <CENTRAL|LOCAL|ALL|NONE>
+                        -dbsnmpPassword <DBSNMP user password>
+                        -sysmanPassword <SYSMAN user password>
+                        [-hostUserName <Host user name for EM backup job>
+                         -hostUserPassword <Host user password for EM backup job>
+                         -backupSchedule <Daily backup schedule in the form of hh:mm>]
+                        [-centralAgent <Enterprise Manager central agent home>]]
+                [-disableSecurityConfiguration <ALL|AUDIT|PASSWORD_PROFILE|NONE>
+                [-datafileDestination <destination directory for all database files> |  -datafileNames <a text file containing database objects such as controlfiles, tablespaces, redo log files and spfile to their corresponding raw device file names mappings in name=value format.>]
+                [-redoLogFileSize <size of each redo log file in megabytes>]
+                [-recoveryAreaDestination <destination directory for all recovery files>]
+                [-datafileJarLocation  <location of the data file jar, used only for clone database creation>]
+                [-storageType < FS | ASM > 
+                        [-asmsnmpPassword     <ASMSNMP password for ASM monitoring>]
+                         -diskGroupName   <database area disk group name>
+                         -recoveryGroupName       <recovery area disk group name>
+                [-characterSet <character set for the database>]
+                [-nationalCharacterSet  <national character set for the database>]
+                [-registerWithDirService <true | false> 
+                        -dirServiceUserName    <user name for directory service>
+                        -dirServicePassword    <password for directory service >
+                        -walletPassword    <password for database wallet >]
+                [-listeners  <list of listeners to configure the database with>]
+                [-variablesFile   <file name for the variable-value pair for variables in the template>]]
+                [-variables  <comma separated list of name=value pairs>]
+                [-initParams <comma separated list of name=value pairs>]
+                [-sampleSchema  <true | false> ]
+                [-memoryPercentage <percentage of physical memory for Oracle>]
+                [-automaticMemoryManagement ]
+                [-totalMemory <memory allocated for Oracle in MB>]
+                [-databaseType <MULTIPURPOSE|DATA_WAREHOUSING|OLTP>]]
+
+Configure a database by specifying the following parameters:
+        -configureDatabase
+                -sourceDB    <source database sid>
+                [-sysDBAUserName     <user name  with SYSDBA privileges>
+                 -sysDBAPassword     <password for sysDBAUserName user name>]
+                [-registerWithDirService|-unregisterWithDirService|-regenerateDBPassword <true | false> 
+                        -dirServiceUserName    <user name for directory service>
+                        -dirServicePassword    <password for directory service >
+                        -walletPassword    <password for database wallet >]
+                [-disableSecurityConfiguration <ALL|AUDIT|PASSWORD_PROFILE|NONE>
+                [-enableSecurityConfiguration <true|false>
+                [-emConfiguration <CENTRAL|LOCAL|ALL|NONE>
+                        -dbsnmpPassword <DBSNMP user password>
+                        -sysmanPassword <SYSMAN user password>
+                        [-hostUserName <Host user name for EM backup job>
+                         -hostUserPassword <Host user password for EM backup job>
+                         -backupSchedule <Daily backup schedule in the form of hh:mm>]
+                        [-centralAgent <Enterprise Manager central agent home>]]
+
+
+Create a template from an existing database by specifying the following parameters:
+        -createTemplateFromDB
+                -sourceDB    <service in the form of <host>:<port>:<sid>>
+                -templateName      <new template name>
+                -sysDBAUserName     <user name  with SYSDBA privileges>
+                -sysDBAPassword     <password for sysDBAUserName user name>
+                [-maintainFileLocations <true | false>]
+
+
+Create a clone template from an existing database by specifying the following parameters:
+        -createCloneTemplate
+                -sourceSID    <source database sid>
+                -templateName      <new template name>
+                [-sysDBAUserName     <user name  with SYSDBA privileges>
+                 -sysDBAPassword     <password for sysDBAUserName user name>]
+                [-maintainFileLocations <true | false>]
+                [-datafileJarLocation       <directory to place the datafiles in a compressed format>]
+
+Generate scripts to create database by specifying the following parameters:
+        -generateScripts
+                -templateName <name of an existing template in default location or the complete template path>
+                -gdbName <global database name>
+                [-scriptDest       <destination for all the scriptfiles>]
+
+Delete a database by specifying the following parameters:
+        -deleteDatabase
+                -sourceDB    <source database sid>
+                [-sysDBAUserName     <user name  with SYSDBA privileges>
+                 -sysDBAPassword     <password for sysDBAUserName user name>]
+Query for help by specifying the following options: -h | -help
+由此来看，dbca命令行参数还是及其丰富的，完全可DIY建库。
+下面，用最少参数建了一个库。
+ dbca -silent -createDatabase -templateName General_Purpose.dbc -gdbName test -sysPassword oracle -systemPassword oracle
+ 注意，密码需指定，不然会有以下提示
+ A value for the command line argument "systemPassword" is not provided. We cannot proceed without a value for this argument.    
+
+下面是静默删掉数据库 但是数据库软件还在
+ [oracle@localhost response]$ dbca -silent -deleteDatabase -sourcedb dnacpdb
+Connecting to database
+4% complete
+9% complete
+14% complete
+19% complete
+23% complete
+28% complete
+47% complete
+Updating network configuration files
+48% complete
+52% complete
+Deleting instance and datafiles
+76% complete
+100% complete
+Look at the log file "/home/u01/app/oracle/cfgtoollogs/dbca/dnacpdb.log" for further details.
+
+
+
+启用oracle 11g自动收集统计信息
+exec DBMS_AUTO_TASK_ADMIN.ENABLE();
+exec DBMS_AUTO_TASK_ADMIN.ENABLE(client_name => 'auto optimizer stats collection',operation =>'auto optimizer stats job',window_name=> null);
+exec DBMS_AUTO_TASK_ADMIN.ENABLE(client_name => 'auto optimizer stats collection',operation => NULL,window_name => NULL);
+ 
+ 
+select window_name,
+       window_next_time,
+       optimizer_stats,
+       aa.WINDOW_ACTIVE,
+       aa.SEGMENT_ADVISOR,
+       aa.AUTOTASK_STATUS,
+       aa.OPTIMIZER_STATS
+  from dba_autotask_window_clients aa
+order by window_next_time
+
