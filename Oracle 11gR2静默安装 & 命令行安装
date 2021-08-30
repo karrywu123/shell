@@ -394,7 +394,7 @@ Deleting instance and datafiles
 100% complete
 Look at the log file "/home/u01/app/oracle/cfgtoollogs/dbca/dnacpdb.log" for further details.
 
-
+dbca -silent -createDatabase -templateName General_Purpose.dbc -gdbName cash855 -sid cash855 -characterSet AL32UTF8 -nationalCharacterSet AL32UTF8 -sysPassword 123456 -systemPassword 123456
 
 启用oracle 11g自动收集统计信息
 exec DBMS_AUTO_TASK_ADMIN.ENABLE();
