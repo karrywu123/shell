@@ -1,0 +1,211 @@
+centos 6静默安装oracle12c release1 
+#################################
+建立oracle用户和组
+groupadd -g 1000 oinstall
+groupadd -g 1001 dba
+useradd -u 1000 -g oinstall -G dba oracle
+passwd oracle
+################################################
+[root@localhost ~]# cat /etc/security/limits.conf
+* soft nproc 65535
+* hard nproc 65535
+* soft nofile 65535
+* hard nofile 65535
+
+oracle   soft   nofile    1024  
+oracle   hard   nofile    65536  
+oracle   soft   nproc    16384  
+oracle   hard   nproc    16384  
+oracle   soft   stack    10240  
+oracle   hard   stack    32768  
+oracle   hard   memlock    134217728  
+oracle   soft   memlock    134217728
+
+[root@localhost ~]# cat /etc/security/limits.d/90-nproc.conf 
+# Default limit for number of user's processes to prevent
+# accidental fork bombs.
+# See rhbz #432903 for reasoning.
+
+* soft nproc 65535
+* hard nproc 65535
+* soft nofile 65535
+* hard nofile 65535
+
+oracle   soft   nofile    65536
+oracle   hard   nofile    65536
+oracle   soft   nproc    16384
+oracle   hard   nproc    16384
+oracle   soft   stack    10240
+oracle   hard   stack    32768
+oracle   hard   memlock    134217728
+oracle   soft   memlock    134217728
+
+################################################
+
+cat /home/oracle/.bash_profile 
+# .bash_profile
+
+# Get the aliases and functions
+if [ -f ~/.bashrc ]; then
+        . ~/.bashrc
+fi
+
+# User specific environment and startup programs
+
+PATH=$PATH:$HOME/bin
+
+export PATH
+export ORACLE_HOSTNAME=localhost.localdomain
+ORACLE_SID=ora12c; export ORACLE_SID
+ORACLE_UNQNAME=ora12c; export ORACLE_UNQNAME
+JAVA_HOME=/usr/java; export JAVA_HOME
+ORACLE_BASE=/home/u01/app/oracle; export ORACLE_BASE
+ORACLE_HOME=$ORACLE_BASE/product/12.2.0.2/dbhome_1; export ORACLE_HOME
+ORACLE_PATH=/home/u01/app/common/oracle/sql; export ORACLE_PATH
+ORACLE_TERM=xterm; export ORACLE_TERM
+NLS_DATE_FORMAT="YYYY-MM-DD HH24:MI:SS"; export NLS_DATE_FORMAT
+TNS_ADMIN=$ORACLE_HOME/network/admin; export TNS_ADMIN
+ORA_NLS11=$ORACLE_HOME/nls/data; export ORA_NLS11
+PATH=.:${JAVA_HOME}/bin:${PATH}:$HOME/bin:$ORACLE_HOME/bin
+PATH=${PATH}:/usr/bin:/bin:/usr/bin/X11:/usr/local/bin
+PATH=${PATH}:/home/u01/app/common/oracle/bin
+export PATH
+LD_LIBRARY_PATH=$ORACLE_HOME/lib
+LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$ORACLE_HOME/oracm/lib
+LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/lib:/usr/lib:/usr/local/lib
+export LD_LIBRARY_PATH
+CLASSPATH=$ORACLE_HOME/JRE
+CLASSPATH=${CLASSPATH}:$ORACLE_HOME/jlib
+CLASSPATH=${CLASSPATH}:$ORACLE_HOME/rdbms/jlib
+CLASSPATH=${CLASSPATH}:$ORACLE_HOME/network/jlib
+export CLASSPATH
+THREADS_FLAG=native; export THREADS_FLAG
+export TEMP=/tmp
+export TMPDIR=/tmp
+export NLS_LANG=AMERICAN_AMERICA.AL32UTF8
+umask 022
+################################################
+
+source /home/oracle/.bash_profile
+
+yum -y install compat-libstdc* binutils-* elfutils-libelf* gcc* glibc* kernel-headers* ksh* libaio* libgcc* libgomp* libstdc* make* sysstat* unixODBC* binutils* unzip lrzsz 
+
+
+###########################响应文件的配置######################
+[root@localhost ~]# cat /home/oracle/database/response/db_install.rsp
+oracle.install.responseFileVersion=/oracle/install/rspfmt_dbinstall_response_schema_v12.2.0
+oracle.install.option=INSTALL_DB_SWONLY
+UNIX_GROUP_NAME=oinstall
+INVENTORY_LOCATION=/home/u01/app/oraInventory 
+ORACLE_BASE=/home/u01/app/oracle
+ORACLE_HOME=/home/u01/app/oracle/product/12.2.0.2/dbhome_1
+oracle.install.db.InstallEdition=EE
+oracle.install.db.OSDBA_GROUP=dba
+oracle.install.db.OSOPER_GROUP=oinstall
+oracle.install.db.OSBACKUPDBA_GROUP=dba
+oracle.install.db.OSDGDBA_GROUP=dba
+oracle.install.db.OSKMDBA_GROUP=dba
+oracle.install.db.OSRACDBA_GROUP=dba
+oracle.install.db.rac.configurationType=
+oracle.install.db.CLUSTER_NODES=
+oracle.install.db.isRACOneInstall=
+oracle.install.db.racOneServiceName=
+oracle.install.db.rac.serverpoolName=
+oracle.install.db.rac.serverpoolCardinality=
+oracle.install.db.config.starterdb.type=GENERAL_PURPOSE
+oracle.install.db.config.starterdb.globalDBName=ora12c
+oracle.install.db.config.starterdb.SID=ora12c
+oracle.install.db.ConfigureAsContainerDB=
+oracle.install.db.config.PDBName=
+oracle.install.db.config.starterdb.characterSet=AL32UTF8
+oracle.install.db.config.starterdb.memoryOption=true
+oracle.install.db.config.starterdb.memoryLimit=1000
+oracle.install.db.config.starterdb.installExampleSchemas=
+oracle.install.db.config.starterdb.password.ALL=
+oracle.install.db.config.starterdb.password.SYS=
+oracle.install.db.config.starterdb.password.SYSTEM=
+oracle.install.db.config.starterdb.password.DBSNMP=
+oracle.install.db.config.starterdb.password.PDBADMIN=
+oracle.install.db.config.starterdb.managementOption=
+oracle.install.db.config.starterdb.omsHost=
+oracle.install.db.config.starterdb.omsPort=
+oracle.install.db.config.starterdb.emAdminUser=
+oracle.install.db.config.starterdb.emAdminPassword=
+oracle.install.db.config.starterdb.enableRecovery=
+oracle.install.db.config.starterdb.storageType=FILE_SYSTEM_STORAGE
+oracle.install.db.config.starterdb.fileSystemStorage.dataLocation=/home/u01/app/oracle/oradata
+oracle.install.db.config.starterdb.fileSystemStorage.recoveryLocation=/home/u01/app/oracle/fast_recovery_area
+oracle.install.db.config.asm.diskGroup=
+oracle.install.db.config.asm.ASMSNMPPassword=
+MYORACLESUPPORT_USERNAME=
+MYORACLESUPPORT_PASSWORD=
+SECURITY_UPDATES_VIA_MYORACLESUPPORT=false
+DECLINE_SECURITY_UPDATES=true
+PROXY_HOST=
+PROXY_PORT=
+PROXY_USER=
+PROXY_PWD=
+COLLECTOR_SUPPORTHUB_URL=
+
+[oracle@localhost database]$ ./runInstaller -silent -ignoreSysPrereqs -showProgress -responseFile /home/oracle/database/response/db_install.rsp
+#####################################################################################################
+以上只是装好了数据库软件环境下面安装数据库
+[oracle@localhost ~]$ dbca -silent -createDatabase -templateName General_Purpose.dbc -gdbName ora12c -sid ora12c -characterSet AL32UTF8 -nationalCharacterSet AL16UTF16 -sysPassword oracle -systemPassword oracle
+
+查看是否创建了CDB，如果有显示名字:
+SQL> select name,cdb from v$database;
+
+[WARNING] [DBT-06208] The 'SYS' password entered does not conform to the Oracle recommended standards.
+   CAUSE: 
+a. Oracle recommends that the password entered should be at least 8 characters in length, contain at least 1 uppercase character, 1 lower case character and 1 digit [0-9].
+b.The password entered is a keyword that Oracle does not recommend to be used as password
+   ACTION: Specify a strong password. If required refer Oracle documentation for guidelines.
+[WARNING] [DBT-06208] The 'SYSTEM' password entered does not conform to the Oracle recommended standards.
+   CAUSE: 
+a. Oracle recommends that the password entered should be at least 8 characters in length, contain at least 1 uppercase character, 1 lower case character and 1 digit [0-9].
+b.The password entered is a keyword that Oracle does not recommend to be used as password
+   ACTION: Specify a strong password. If required refer Oracle documentation for guidelines.
+Copying database files
+1% complete
+2% complete
+18% complete
+33% complete
+Creating and starting Oracle instance
+35% complete
+40% complete
+44% complete
+49% complete
+50% complete
+53% complete
+55% complete
+Completing Database Creation
+56% complete
+57% complete
+58% complete
+62% complete
+65% complete
+66% complete
+Executing Post Configuration Actions
+100% complete
+Look at the log file "/home/u01/app/oracle/cfgtoollogs/dbca/ora12c/ora12c0.log" for further details.
+
+下面是静默删掉数据库 但是数据库软件还在
+[oracle@localhost ~]$ dbca -silent -deleteDatabase -sourcedb  ora12c
+Enter SYS user password: 
+
+Connecting to database
+4% complete
+9% complete
+14% complete
+19% complete
+23% complete
+28% complete
+47% complete
+Updating network configuration files
+52% complete
+Deleting instance and datafiles
+76% complete
+100% complete
+Look at the log file "/home/u01/app/oracle/cfgtoollogs/dbca/ora12c.log" for further details.
+
+
