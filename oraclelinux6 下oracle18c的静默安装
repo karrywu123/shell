@@ -1,0 +1,357 @@
+1oraclelinux6 下oracle18c的静默安装
+#################################
+建立oracle用户和组
+/usr/sbin/groupadd -g 54321 oinstall
+
+/usr/sbin/groupadd -g 54327 asmdba
+
+/usr/sbin/groupadd -g 54328 asmoper
+
+/usr/sbin/groupadd -g 54322 dba
+
+/usr/sbin/groupadd -g 54323 oper
+
+/usr/sbin/groupadd -g 54324 backupdba
+
+/usr/sbin/groupadd -g 54325 dgdba
+
+/usr/sbin/groupadd -g 54326 kmdba
+
+/usr/sbin/groupadd -g 54330 racdba
+
+/usr/sbin/useradd -u 54321 -g oinstall -G oper,dba,asmdba,backupdba,dgdba,kmdba,racdba oracle
+passwd  oracle
+################################################
+[root@localhost ~]# cat /etc/security/limits.conf
+* soft nproc 65535
+* hard nproc 65535
+* soft nofile 65535
+* hard nofile 65535
+
+oracle   soft   nofile    10240  
+oracle   hard   nofile    65536  
+oracle   soft   nproc    16384  
+oracle   hard   nproc    16384  
+oracle   soft   stack    10240  
+oracle   hard   stack    32768  
+oracle   hard   memlock    134217728  
+oracle   soft   memlock    134217728
+
+[root@localhost ~]# cat /etc/security/limits.d/90-nproc.conf 
+# Default limit for number of user's processes to prevent
+# accidental fork bombs.
+# See rhbz #432903 for reasoning.
+
+* soft nproc 65535
+* hard nproc 65535
+* soft nofile 65535
+* hard nofile 65535
+
+oracle   soft   nofile    10240
+oracle   hard   nofile    65536
+oracle   soft   nproc    16384
+oracle   hard   nproc    16384
+oracle   soft   stack    10240
+oracle   hard   stack    32768
+oracle   hard   memlock    134217728
+oracle   soft   memlock    134217728
+######################################
+yum -y install compat-libstdc* binutils-* elfutils-libelf* gcc* glibc* kernel-headers* ksh* libaio* libgcc* libgomp* libstdc* make* sysstat* unixODBC* binutils* unzip lrzsz 
+
+###############################环境变量
+cat /home/oracle/.bash_profile 
+# .bash_profile
+
+# Get the aliases and functions
+if [ -f ~/.bashrc ]; then
+        . ~/.bashrc
+fi
+
+# User specific environment and startup programs
+
+PATH=$PATH:$HOME/bin
+
+export PATH
+export ORACLE_HOSTNAME=localhost.localdomain
+ORACLE_SID=ora18c; export ORACLE_SID
+ORACLE_UNQNAME=ora18c; export ORACLE_UNQNAME
+JAVA_HOME=/usr/java; export JAVA_HOME
+ORACLE_BASE=/home/u01/app/oracle; export ORACLE_BASE
+ORACLE_HOME=$ORACLE_BASE/product/18.0.0/dbhome_1; export ORACLE_HOME
+ORACLE_PATH=/home/u01/app/common/oracle/sql; export ORACLE_PATH
+ORACLE_TERM=xterm; export ORACLE_TERM
+NLS_DATE_FORMAT="YYYY-MM-DD HH24:MI:SS"; export NLS_DATE_FORMAT
+TNS_ADMIN=$ORACLE_HOME/network/admin; export TNS_ADMIN
+ORA_NLS11=$ORACLE_HOME/nls/data; export ORA_NLS11
+PATH=.:${JAVA_HOME}/bin:${PATH}:$HOME/bin:$ORACLE_HOME/bin
+PATH=${PATH}:/usr/bin:/bin:/usr/bin/X11:/usr/local/bin
+PATH=${PATH}:/home/u01/app/common/oracle/bin
+export PATH
+LD_LIBRARY_PATH=$ORACLE_HOME/lib
+LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$ORACLE_HOME/oracm/lib
+LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/lib:/usr/lib:/usr/local/lib
+export LD_LIBRARY_PATH
+CLASSPATH=$ORACLE_HOME/JRE
+CLASSPATH=${CLASSPATH}:$ORACLE_HOME/jlib
+CLASSPATH=${CLASSPATH}:$ORACLE_HOME/rdbms/jlib
+CLASSPATH=${CLASSPATH}:$ORACLE_HOME/network/jlib
+export CLASSPATH
+THREADS_FLAG=native; export THREADS_FLAG
+export TEMP=/tmp
+export TMPDIR=/tmp
+export NLS_LANG=AMERICAN_AMERICA.AL32UTF8
+umask 022
+#################################################
+LINUX.X64_180000_db_home.zip
+############################
+以oracle用户创建oraclehome目录
+mkdir -p /home/u01/app/oracle/product/18.0.0/dbhome_1
+将压缩包解压到orale 的home目录 及是 /home/u01/app/oracle/product/18.0.0/dbhome_1
+
+将压缩包解压到orale 的home目录 及是 /home/u01/app/oracle/product/18.0.0/dbhome_1
+如下
+[oracle@localhost dbhome_1$ ls
+addnode     clone  cv              dbs          dmu      has            inventory  jlib  md       odbc    oracore  oss   plsql    racg      root.sh.old    sdk           sqlpatch  ucp  xdk
+apex        crs    data            deinstall    drdaas   hs             javavm     ldap  mgw      olap    ord      oui   precomp  rdbms     root.sh.old.1  slax          sqlplus   usm
+assistants  css    db_install.rsp  demo         dv       install        jdbc       lib   network  OPatch  ordim    owm   QOpatch  relnotes  runInstaller   sqldeveloper  srvm      utl
+bin         ctx    dbjava          diagnostics  env.ora  instantclient  jdk        log   nls      opmn    ords     perl  R        root.sh   schagent.conf  sqlj          suptools  wwg
+进入install目录 修改相应文件
+
+###########################响应文件的配置######################
+[oracle@localhost response]$ pwd
+/home/u01/app/oracle/product/18.0.0/dbhome_1/install/response
+
+[oracle@localhost response]$ cat db_install.rsp
+oracle.install.db.config.starterdb.globalDBName=ora18c
+oracle.install.db.config.starterdb.SID=ora18c
+oracle.install.db.config.starterdb.memoryLimit=5000
+oracle.install.responseFileVersion=/oracle/install/rspfmt_dbinstall_response_schema_v18.0.0
+oracle.install.option=INSTALL_DB_SWONLY
+UNIX_GROUP_NAME=oinstall
+INVENTORY_LOCATION=/home/u01/app/oraInventory 
+oracle.install.db.InstallEdition=EE
+oracle.install.db.OSDBA_GROUP=dba
+oracle.install.db.OSOPER_GROUP=oper
+oracle.install.db.OSBACKUPDBA_GROUP=backupdba
+oracle.install.db.OSDGDBA_GROUP=dgdba
+oracle.install.db.OSKMDBA_GROUP=kmdba
+oracle.install.db.OSRACDBA_GROUP=dba
+oracle.install.db.CLUSTER_NODES=
+oracle.install.db.config.starterdb.type=GENERAL_PURPOSE
+oracle.install.db.ConfigureAsContainerDB=
+oracle.install.db.config.PDBName=
+oracle.install.db.config.starterdb.characterSet=AL32UTF8
+oracle.install.db.config.starterdb.memoryOption=true
+oracle.install.db.config.starterdb.installExampleSchemas=
+oracle.install.db.config.starterdb.password.ALL=oracle
+oracle.install.db.config.starterdb.password.SYS=
+oracle.install.db.config.starterdb.password.SYSTEM=
+oracle.install.db.config.starterdb.password.DBSNMP=
+oracle.install.db.config.starterdb.password.PDBADMIN=
+oracle.install.db.config.starterdb.managementOption=
+oracle.install.db.config.starterdb.omsHost=
+oracle.install.db.config.starterdb.omsPort=
+oracle.install.db.config.starterdb.emAdminUser=
+oracle.install.db.config.starterdb.emAdminPassword=
+oracle.install.db.config.starterdb.enableRecovery=
+oracle.install.db.config.starterdb.storageType=
+oracle.install.db.config.starterdb.fileSystemStorage.dataLocation=/home/u01/app/oracle/oradata
+oracle.install.db.config.starterdb.fileSystemStorage.recoveryLocation=/home/u01/app/oracle/fast_recovery_area
+oracle.install.db.config.asm.diskGroup=
+oracle.install.db.config.asm.ASMSNMPPassword=
+SECURITY_UPDATES_VIA_MYORACLESUPPORT=false
+
+
+[oracle@localhost dbhome_1]$ ./runInstaller  -silent -force -noconfig -ignorePrereq -responseFile install/response/db_install.rsp
+Launching Oracle Database Setup Wizard...
+
+[WARNING] [INS-13014] Target environment does not meet some optional requirements.
+   CAUSE: Some of the optional prerequisites are not met. See logs for details. installActions2019-03-28_07-36-20PM.log
+   ACTION: Identify the list of failed prerequisite checks from the log: installActions2019-03-28_07-36-20PM.log. Then either from the log file or from installation manual find the appropriate configuration to meet the prerequisites and fix it manually.
+The response file for this session can be found at:
+ /home/u01/app/oracle/product/18.0.0/dbhome_1/install/response/db_2019-03-28_07-36-20PM.rsp
+
+You can find the log of this install session at:
+ /tmp/InstallActions2019-03-28_07-36-20PM/installActions2019-03-28_07-36-20PM.log
+
+
+As a root user, execute the following script(s):
+        1. /home/u01/app/oraInventory/orainstRoot.sh
+        2. /home/u01/app/oracle/product/18.0.0/dbhome_1/root.sh
+
+Execute /home/u01/app/oraInventory/orainstRoot.sh on the following nodes: 
+[localhost]
+Execute /home/u01/app/oracle/product/18.0.0/dbhome_1/root.sh on the following nodes: 
+[localhost]
+
+
+Successfully Setup Software with warning(s).
+Moved the install session logs to:
+ /home/u01/app/oraInventory/logs/InstallActions2019-03-28_07-36-20PM
+ 
+#另外开一个控制台root执行下面的脚本 
+ As a root user, execute the following script(s):
+        1. /home/u01/app/oraInventory/orainstRoot.sh
+        2. /home/u01/app/oracle/product/18.0.0/dbhome_1/root.sh
+        
+ 自此oracle18c软件安装成功
+ 
+ dbca静默安装数据库
+ [oracle@localhost ~]$  dbca -silent -createDatabase -templateName General_Purpose.dbc -gdbName ora18c -sid ora18c -characterSet AL32UTF8 -nationalCharacterSet AL16UTF16 -sysPassword oracle -systemPassword oracle
+创建数据库开启容器数据库的功能
+ dbca -silent -createDatabase -templateName General_Purpose.dbc -gdbName ora18c -sid ora18c   -createAsContainerDatabase true  -characterSet AL32UTF8 -nationalCharacterSet AL16UTF16 -sysPassword oracle -systemPassword oracle
+ 
+ 
+
+[WARNING] [DBT-06208] The 'SYS' password entered does not conform to the Oracle recommended standards.
+   CAUSE: 
+a. Oracle recommends that the password entered should be at least 8 characters in length, contain at least 1 uppercase character, 1 lower case character and 1 digit [0-9].
+b.The password entered is a keyword that Oracle does not recommend to be used as password
+   ACTION: Specify a strong password. If required refer Oracle documentation for guidelines.
+[WARNING] [DBT-06208] The 'SYSTEM' password entered does not conform to the Oracle recommended standards.
+   CAUSE: 
+a. Oracle recommends that the password entered should be at least 8 characters in length, contain at least 1 uppercase character, 1 lower case character and 1 digit [0-9].
+b.The password entered is a keyword that Oracle does not recommend to be used as password
+   ACTION: Specify a strong password. If required refer Oracle documentation for guidelines.
+Prepare for db operation
+10% complete
+Copying database files
+40% complete
+Creating and starting Oracle instance
+42% complete
+46% complete
+50% complete
+54% complete
+60% complete
+Completing Database Creation
+66% complete
+69% complete
+70% complete
+Executing Post Configuration Actions
+100% complete
+Database creation complete. For details check the logfiles at:
+ /home/u01/app/oracle/cfgtoollogs/dbca/ora18c.
+Database Information:
+Global Database Name:ora18c
+System Identifier(SID):ora18c
+Look at the log file "/home/u01/app/oracle/cfgtoollogs/dbca/ora18c/ora18c.log" for further details.
+
+oracle12c  oracle18c 开启 OEM
+
+SQL> show parameter dispatchers;
+
+SQL> exec dbms_xdb_config.sethttpport(8088);
+
+ 上面的过程把端口号改为8088然后访问http://l服务器IP:8088/em就可以了
+ 
+
+跨版本导数据报错 11g数据导入18c
+ORA-31626: job does not exist
+ORA-31633: unable to create master table "BL_CP.SYS_IMPORT_SCHEMA_05"
+ORA-06512: at "SYS.DBMS_SYS_ERROR", line 95
+ORA-06512: at "SYS.KUPV$FT", line 1142
+ORA-01950: no privileges on tablespace 'OP_TBS'
+ORA-06512: at "SYS.KUPV$FT", line 1035
+ORA-06512: at "SYS.KUPV$FT", line 1023
+
+sqlplus / as sysdba
+SQL>ALTER USER bl_cp QUOTA unlimited ON op_tbs; 
+
+############################################################################################
+oracle 18c  优化In-Memory 参数步骤
+[oracle@oracle18c_test01 ~]$ sqlplus / as sysdba
+
+SQL*Plus: Release 18.0.0.0.0 - Production on Sun Mar 31 21:48:32 2019
+Version 18.3.0.0.0
+
+Copyright (c) 1982, 2018, Oracle.  All rights reserved.
+
+
+Connected to:
+Oracle Database 18c Enterprise Edition Release 18.0.0.0.0 - Production
+Version 18.3.0.0.0
+
+SQL> SHOW PARAMETER POPULATE_SERVERS
+
+NAME                                 TYPE        VALUE
+------------------------------------ ----------- ------------------------------
+inmemory_max_populate_servers        integer     0
+inmemory_trickle_repopulate_servers_ integer     1
+percent
+SQL> 
+SQL> 
+SQL> 
+SQL> 
+SQL> 
+SQL> 
+SQL> ALTER SYSTEM SET INMEMORY_TRICKLE_REPOPULATE_SERVERS_PERCENT=25;
+
+System altered.
+
+SQL> 
+SQL> 
+SQL> 
+SQL> SHOW PARAMETER POPULATE_SERVERS
+
+NAME                                 TYPE        VALUE
+------------------------------------ ----------- ------------------------------
+inmemory_max_populate_servers        integer     0
+inmemory_trickle_repopulate_servers_ integer     25
+percent
+SQL> 
+SQL> 
+SQL> 
+SQL> 
+SQL> alter system set inmemory_max_populate_servers  = 12;
+
+System altered.
+
+SQL> SHOW PARAMETER POPULATE_SERVERS
+
+NAME                                 TYPE        VALUE
+------------------------------------ ----------- ------------------------------
+inmemory_max_populate_servers        integer     12
+inmemory_trickle_repopulate_servers_ integer     25
+
+
+
+为数据库启用IM列存储
+将INMEMORY_SIZE初始化参数设置为非零值。
+最低设置是100M。
+使用该ALTER SYSTEM语句在服务器参数文件（SPFILE）中设置此初始化参数时，必须指定SCOPE=SPFILE。
+例如，以下语句将内存区域大小设置为10 GB
+ALTER SYSTEM SET INMEMORY_SIZE = 10G SCOPE=SPFILE;
+
+SHOW PARAMETER INMEMORY_SIZE
+
+
+
+配置自动内存
+自动内存使用访问跟踪，列统计信息和其他相关统计信息来管理IM列存储中的对象。
+
+alter system set _exadata_feature_on=TURE;
+
+
+ALTER SYSTEM SET INMEMORY_AUTOMATIC_LEVEL = ‘MEDIUM’ SCOPE=BOTH;
+• 改善了性能
+通过驱逐冷段来减轻内存压力，自动内存可以提高工作负载的性能，因为工作数据集驻留在IM列存储中。
+
+• 易于管理
+通过驱逐冷段来管理IM列存储器以减轻存储器压力涉及显着的用户干预。自动内存通过最少的用户干预解决了这些问题。
+DBMS_INMEMORY_ADMIN
+使用该DBMS_INMEMORY_ADMIN程序包控制自动内存中考虑统计信息的时间窗口。例如，您可以指定Automatic In-Memory仅考虑过去一个月或过去一周。
+使用该DBMS_INMEMORY_ADMIN.AIM_SET_PARAMETER过程设置AIM_STATWINDOW_DAYS常量。例如，要将滑动统计窗口设置为7天，请执行以下程序：
+ EXEC DBMS_INMEMORY_ADMIN.AIM_SET_PARAMETER ( DBMS_INMEMORY_ADMIN.AIM_STATWINDOW_DAYS, 7 );
+ 要更改自动内存间隔设置：
+1. 在SQL * Plus或SQL Developer中，以具有管理权限的用户身份登录数据库。
+
+2. （可选）检查aim_statwindow_days参数的当前设置。
+以下示例调用该DBMS_INMEMORY_ADMIN.AIM_GET_PARAMETER过程：
+
+
+
+开启基线自动捕捉
+ALTER SYSTEM SET OPTIMIZER_CAPTURE_SQL_PLAN_BASELINES=true;
+show parameter sql_plan
+
+
