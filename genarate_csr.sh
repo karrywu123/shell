@@ -1,5 +1,6 @@
 #!/bin/bash
 
+#https://sso.secureserver.net/?app=certs&path=%2Fcert
 read -p "please input ssl domain: " domain
 
 if [ -e $domain ];then
