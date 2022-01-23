@@ -13,8 +13,8 @@ func main() {
 	}
 	client := &http.Client{Transport: tr}
 
-	//https://dgnew86.com
-	seedUrl := "https://dg168new.com"
+	//https://www.baidu.com
+	seedUrl := "https://www.baidu.com"
 	resp, err := client.Get(seedUrl)
 	defer resp.Body.Close()
 
